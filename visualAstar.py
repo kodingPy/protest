@@ -1,7 +1,10 @@
-import pygame
+
+import pygame, sys
 import math
 from heapq import heappush, heappop
 from apiTask import APITask
+from gameBoard import Game
+
 import json 
 
 RED = (255,0,0)
@@ -18,7 +21,7 @@ class Node:
         self.f_score = 0
         self.g_score = 0
         self.h_score = 0
-        self.color = (0, 0, 0)
+        self.color = WHITE
         self.square_path = {}
         self.value = 0
 
@@ -30,9 +33,15 @@ class Node:
         return data[self.x][self.y]
     
     def set_color(self, value):
-        return WHITE if self.value == 0 else BLUE if self.value == 1 else RED if self.value < 0 else GREEN
+        if value == 0: return  WHITE 
+        if value == 2: return  BLUE
+        if value == 1: return RED
+        if value < 0: return  GREEN
+        else:
+            return WHITE
 
-
+    
+    
 class Grid:
     def __init__(self, width, height):
         self.width = width
@@ -97,63 +106,113 @@ class AStar:
 def visualize_astar(grid, start, goal, path):
 
     pygame.init()
-
-    screen = pygame.display.set_mode((grid.width * 10, grid.height * 10))
+    squarePaths = []
+    screen = pygame.display.set_mode((grid.width * 64, grid.height * 64))
     pygame.display.set_caption("A* Algorithm Visualization")
-
+    size = 48
     clock = pygame.time.Clock()
-
+    castle_list =  []
+    masons = grid.set_mason(0,0)
+    
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-        # Fill the screen with black color
-        screen.fill((0, 0, 128))
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = pygame.mouse.get_pos()
+                    print(x // 48, y // 48)
 
+                    cell = grid.set_castle(x // size, y //size)
+                    squarePaths = grid.draw_square_path(screen, cell[0], cell[1], 1)
+                #draw square path on screen
+            for square in squarePaths:
+                pygame.draw.rect(screen, GREEN, (square[0] * size, square[1] * size, size, size),width= 2, border_radius= 2)        
+                pygame.display.flip()
+        # Fill the screen with black color
+        screen.fill((255, 255, 255))
+        
+        
         # Draw the grid
         for x in range(grid.width):
             for y in range(grid.height):
-                node = Node(jsondata["matches"][0]["board"]["structures"][x], jsondata["matches"][0]["board"]["structures"][y])
-
-                #node = grid.get_node(x, y)
-                node.color = node.set_color(jsondata["matches"][0]["board"]["structures"][x][y])
-                pygame.draw.rect(screen, node.color, (11, 11, 11, 11))
-        """
+                surface = pygame.Surface((size, size))
+                surface.fill(WHITE)
+                node = grid
+                #node.color = node.set_color(jsondata["matches"][0]["board"]["structures"][x][y])
+                
+                #pygame.draw.rect(screen, BLACK, (node.x , node.y , 20, 20),width= 2, border_radius= 0)
+                nodeIcon = grid.icon(x, y)
+                imageIcon = pygame.transform.scale(nodeIcon, (size, size))
+                surface.blit(imageIcon, (0,0))
+                screen.blit(surface, (x * size,y * size))
+                
+                
+                """ castle_list = grid.set_castle(8, 8)
+                if castle_list:
+                    squarePaths = grid.draw_square_path(screen, castle_list[0], castle_list[1], 1)
+                #draw square path on screen
+                    for square in squarePaths:
+                        pygame.draw.rect(screen, GREEN, (square[0] * size, square[1] * size, size, size),width= 2, border_radius= 2)
+                 """
+                #
+        '''
+        
                 if node.parent is not None:
-                    pygame.draw.line(screen, (255, 255, 255), (node.x * 10, node.y * 10), (node.parent.x * 10, node.parent.y * 10), 2)
+                #    pygame.draw.line(screen, (255, 255, 0), (node.x * 10, node.y * 10), (node.parent.x * 10, node.parent.y * 10), 2)
             
                 if node.value == jsondata["matches"][0]["board"]["masons"][x][y]:
-                    pygame.draw.rect(screen, (0, 255, 0), (grid.width, grid.height * 10, 10, 10))
-                elif jsondata["matches"][0]["board"]["structures"][x][y] == 2:
-                    pygame.draw.rect(screen, (255, 0, 0), (node.x * 10, node.y * 10, 10, 10))
-            """
+                    pygame.draw.rect(screen, (0, 255, 0), (node.x , node.y, 10, 10))
+                elif node.value == jsondata["matches"][0]["board"]["masons"][x][y]:
+                    pygame.draw.rect(screen, BLACK, (node.x , node.y , 20, 20),width= 1, border_radius= 45) 
+'''
+       
+                
+                
 
         # Draw the path
-        for node in path:
-                pygame.draw.rect(screen, (0, 128, 0), (node.x * 10, node.y * 10, 10, 10))
+       # for node in path:
+          #     pygame.draw.rect(screen, (255, 0, 0), (node.x * 10, node.y * 10, 10, 10))
+
+
+        
+
+        
+        
+
+        enemyImg = pygame.transform.scale(pygame.image.load("asset/enemy.png"), (size, size))
+        masonImg = pygame.transform.scale(pygame.image.load("asset/masons.png") , (size, size))
+        screen.blit(enemyImg, (64, 555))
+        grid.draw_label(screen, "Enemy:", (10, 580))
+        screen.blit(masonImg, (320, 555))
+        grid.draw_label(screen, "Jibun:", (260, 580))
 
         # Update the display
         pygame.display.flip()
 
         # Limit the framerate to 30 FPS
-        clock.tick(30)
+        clock.tick(3)
 
 if __name__ == "__main__":
 
-    jsondata =  APITask.getMatches()
+    apiRequest = APITask("")
+    jsondata =  apiRequest.jsonReturn
 
-    # Create a grid
-    grid = Grid(jsondata["matches"][0]["board"]["width"], jsondata["matches"][0]["board"]["width"])
+    if jsondata:
+        print(apiRequest.structures)
+        # Create a grid
+        board = Game(jsondata)
+        grid = Grid(board.width, board.height)
+        
 
     # Set the start and goal nodes
-    start = grid.get_node(0, 0)
-    goal = grid.get_node(9, 9)
+        start = grid.get_node(0, 0)
+        goal = grid.get_node(9, 9)
 
     # Find a path from the start to the goal node
-    astar = AStar(grid, start, goal)
-    path = astar.search()
+        astar = AStar(grid, start, goal)
+        path = astar.search()
 
     # Visualize the path
-    visualize_astar(grid, start, goal, path)
+        visualize_astar(board, start, goal, path)
